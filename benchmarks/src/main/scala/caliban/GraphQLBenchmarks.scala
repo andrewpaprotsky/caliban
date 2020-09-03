@@ -31,6 +31,20 @@ class GraphQLBenchmarks {
           }
        }""".stripMargin
 
+  val simpleQueryWithZIOField: String =
+    """{
+          characters{
+            nameZIO
+          }
+       }""".stripMargin
+
+  val simpleQueryWithZQueryField: String =
+    """{
+          characters{
+            nameZQuery
+          }
+       }""".stripMargin
+
   val fullIntrospectionQuery = """
               query IntrospectionQuery {
                 __schema {
@@ -137,21 +151,65 @@ class GraphQLBenchmarks {
     character: CharacterArgs => UIO[Option[Character]]
   )
 
-  val resolver: RootResolver[Query, Unit, Unit] = RootResolver(
+  def resolver(characters: List[Character]): RootResolver[Query, Unit, Unit] = RootResolver(
     Query(
-      args => UIO(Data.characters.filter(c => args.origin.forall(c.origin == _))),
-      args => UIO(Data.characters.find(c => c.name == args.name))
+      args => UIO(characters.filter(c => args.origin.forall(c.origin == _))),
+      args => UIO(characters.find(c => c.name == args.name))
     )
   )
 
-  val interpreter: GraphQLInterpreter[Any, CalibanError] = runtime.unsafeRun(graphQL(resolver).interpreter)
+  def makeInterpreter(characters: List[Character]): GraphQLInterpreter[Any, CalibanError] =
+    runtime.unsafeRun(graphQL(resolver(characters)).interpreter)
 
-  @Benchmark
-  def simpleCaliban(): Unit = {
-    val io = interpreter.execute(simpleQuery)
+  val interpreter = makeInterpreter(Data.characters)
+
+  val interpreter1k = makeInterpreter(List.fill(100)(Data.characters).flatten)
+
+  val interpreter10k = makeInterpreter(List.fill(1000)(Data.characters).flatten)
+
+  val interpreter100k = makeInterpreter(List.fill(10000)(Data.characters).flatten)
+
+  def queryCaliban(query: String, interpreter: GraphQLInterpreter[Any, CalibanError]): Unit = {
+    val io = interpreter.execute(query)
     runtime.unsafeRun(io)
     ()
   }
+
+  @Benchmark
+  def simpleCaliban(): Unit = queryCaliban(simpleQuery, interpreter)
+
+  @Benchmark
+  def simpleCalibanWithZIOField(): Unit = queryCaliban(simpleQueryWithZIOField, interpreter)
+
+  @Benchmark
+  def simpleCalibanWithZQueryField(): Unit = queryCaliban(simpleQueryWithZQueryField, interpreter)
+
+  @Benchmark
+  def simpleCaliban1k(): Unit = queryCaliban(simpleQuery, interpreter1k)
+
+  @Benchmark
+  def simpleCalibanWithZIOField1k(): Unit = queryCaliban(simpleQueryWithZIOField, interpreter1k)
+
+  @Benchmark
+  def simpleCalibanWithZQueryField1k(): Unit = queryCaliban(simpleQueryWithZQueryField, interpreter1k)
+
+  @Benchmark
+  def simpleCaliban10k(): Unit = queryCaliban(simpleQuery, interpreter10k)
+
+  @Benchmark
+  def simpleCalibanWithZIOField10k(): Unit = queryCaliban(simpleQueryWithZIOField, interpreter10k)
+
+  @Benchmark
+  def simpleCalibanWithZQueryField10k(): Unit = queryCaliban(simpleQueryWithZQueryField, interpreter10k)
+
+  @Benchmark
+  def simpleCaliban100k(): Unit = queryCaliban(simpleQuery, interpreter100k)
+
+  @Benchmark
+  def simpleCalibanWithZIOField100k(): Unit = queryCaliban(simpleQueryWithZIOField, interpreter100k)
+
+  @Benchmark
+  def simpleCalibanWithZQueryField100k(): Unit = queryCaliban(simpleQueryWithZQueryField, interpreter100k)
 
   @Benchmark
   def introspectCaliban(): Unit = {
