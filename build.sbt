@@ -3,17 +3,18 @@ import sbtcrossproject.CrossPlugin.autoImport.{ crossProject, CrossType }
 val mainScala = "2.12.12"
 val allScala  = Seq("2.13.3", mainScala)
 
-val akkaVersion           = "2.6.8"
+val akkaVersion           = "2.6.9"
 val catsEffectVersion     = "2.2.0"
 val circeVersion          = "0.13.0"
 val http4sVersion         = "0.21.7"
 val playVersion           = "2.8.1"
+val playJsonVersion       = "2.9.1"
 val silencerVersion       = "1.7.1"
 val sttpVersion           = "2.2.8"
 val tapirVersion          = "0.16.16"
 val zioVersion            = "1.0.1"
 val zioInteropCatsVersion = "2.1.4.0"
-val zioConfigVersion      = "1.0.0-RC26"
+val zioConfigVersion      = "1.0.0-RC27"
 val zqueryVersion         = "0.2.5"
 
 inThisBuild(
@@ -89,7 +90,7 @@ lazy val core = project
       "dev.zio"           %% "zio-test"     % zioVersion % "test",
       "dev.zio"           %% "zio-test-sbt" % zioVersion % "test",
       "io.circe"          %% "circe-core"   % circeVersion % Optional,
-      "com.typesafe.play" %% "play-json"    % playVersion % Optional,
+      "com.typesafe.play" %% "play-json"    % playJsonVersion % Optional,
       compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
     )
   )
