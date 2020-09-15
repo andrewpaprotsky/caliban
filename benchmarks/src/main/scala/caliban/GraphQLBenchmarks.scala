@@ -24,6 +24,22 @@ import zio.{ BootstrapRuntime, Runtime, UIO, ZEnv }
 @Fork(1)
 class GraphQLBenchmarks {
 
+  val complexQuery: String =
+    """{
+          foos {
+            id
+            name
+            bars {
+              id
+              name
+              baz {
+                id
+                name
+              }
+            }
+          }
+       }""".stripMargin
+
   val simpleQuery: String =
     """{
           characters{
@@ -172,6 +188,22 @@ class GraphQLBenchmarks {
   def queryCaliban(query: String, interpreter: GraphQLInterpreter[Any, CalibanError]): Unit = {
     val io = interpreter.execute(query)
     runtime.unsafeRun(io)
+    ()
+  }
+
+  val complexInterpreter: GraphQLInterpreter[Any, CalibanError] =
+    runtime.unsafeRun(graphQL(RootResolver(ComplexData.query)).interpreter)
+
+  @Benchmark
+  def complexCaliban(): Unit = queryCaliban(complexQuery, complexInterpreter)
+
+  @Benchmark
+  def complexSangria(): Unit = {
+    import ComplexData._
+
+    val future: Future[Json] =
+      Future.fromTry(QueryParser.parse(complexQuery)).flatMap(queryAst => Executor.execute(SchemaDefinition, queryAst, (), deferredResolver = Resolver))
+    Await.result(future, 1 minute)
     ()
   }
 
