@@ -17,6 +17,21 @@ object ComplexData {
   case class Baz(id: Int, name: String)
   case class Query(foos: List[Foo])
 
+  val BazDataSource =
+    DataSource.Batched.make[Any, BazRequest](BazRequest.toString) { requests =>
+      ZIO
+        .succeed(requests.foldLeft(Set.empty[Int]) { case (ids, BazRequest.GetById(id)) => ids + id })
+        .map(bazs)
+        .map(_.groupBy(_.id))
+        .map {
+          case items =>
+            requests.foldLeft(CompletedRequestMap.empty) {
+              case (result, request @ BazRequest.GetById(id)) =>
+                result.insert(request)(items.get(id).flatMap(_.headOption).toRight(new Throwable))
+            }
+        }
+    }
+
   val Bazs = List.fill(1000)("baz").zipWithIndex.map { case (name, i) => Baz(i, name) }
   val Bars = List.fill(1000)("bar").zipWithIndex.map { case (name, i) => Bar(i, name, i, baz(i)) }
   val Foos = List.fill(10)("foo").zipWithIndex.zip(Bars.grouped(100).toList).map {
@@ -45,21 +60,6 @@ object ComplexData {
   object BazRequest {
     case class GetById(id: Int) extends BazRequest
   }
-
-  val BazDataSource =
-    DataSource.Batched.make[Any, BazRequest](BazRequest.toString) { requests =>
-      ZIO
-        .succeed(requests.foldLeft(Set.empty[Int]) { case (ids, BazRequest.GetById(id)) => ids + id })
-        .map(bazs)
-        .map(_.groupBy(_.id))
-        .map {
-          case items =>
-            requests.foldLeft(CompletedRequestMap.empty) {
-              case (result, request @ BazRequest.GetById(id)) =>
-                result.insert(request)(items.get(id).flatMap(_.headOption).toRight(new Throwable))
-            }
-        }
-    }
 
   def bazs(ids: Set[Int]): List[Baz] = Bazs.filter(baz => ids.contains(baz.id))
 
