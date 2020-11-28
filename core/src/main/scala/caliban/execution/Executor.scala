@@ -31,7 +31,7 @@ object Executor {
   ): URIO[R, GraphQLResponse[CalibanError]] = {
 
     val allowParallelism = request.operationType match {
-      case OperationType.Query        => false
+      case OperationType.Query        => true
       case OperationType.Mutation     => false
       case OperationType.Subscription => false
     }
